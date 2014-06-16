@@ -54,7 +54,7 @@ function StatsBase.fit(x::Matrix{Float64}, y::Vector{Float64}, opts::RegressionF
     trees = Array(RegressionTree, 0)
     for i=1:opts.num_trees
         shuffle_locs = rand(1:size(x,1), size(x,1))
-        tree = fit(x[shuffle_locs,:], y[shuffle_locs], opts.tree_options)
+        tree = fit(x[shuffle_locs,:], y[shuffle_locs], opts.tree_options, shuffle_locs)
         if opts.display
             println("Tree ", i, "\tNodes: ", length(tree), "\tDepth: ", depth(tree))
         end

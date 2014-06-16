@@ -38,6 +38,7 @@ end
 
 type RegressionLeaf <: DecisionLeaf
     value::Float64
+    train_row_indices::Vector{Int}
 end
 
 type DecisionBranch <: Branch{Decision}
@@ -77,10 +78,10 @@ function StatsBase.fit(x::Matrix{Float64}, y::Vector, opts::ClassificationTreeOp
     ClassificationTree(DecisionTree(root), classes, features_per_split, opts)
 end
 
-function StatsBase.fit(x::Matrix{Float64}, y::Vector{Float64}, opts::RegressionTreeOptions)
+function StatsBase.fit(x::Matrix{Float64}, y::Vector{Float64}, opts::RegressionTreeOptions, row_indices::Vector{Int})
     features_per_split = int(opts.features_per_split_fraction*size(x,2))
     features_per_split = max(1, size(x,2))
-    root = train_regression_branch(x, y, opts, features_per_split)
+    root = train_regression_branch(x, y, opts, features_per_split, row_indices)
     RegressionTree(DecisionTree(root), features_per_split, opts)
 end
 
@@ -114,9 +115,9 @@ function train_classification_branch(x::Matrix{Float64}, y::Vector{Int}, opts::C
     DecisionBranch(best_feature, split_value, left, right)
 end
 
-function train_regression_branch(x::Matrix{Float64}, y::Vector{Float64}, opts::RegressionTreeOptions, features_per_split::Int)
+function train_regression_branch(x::Matrix{Float64}, y::Vector{Float64}, opts::RegressionTreeOptions, features_per_split::Int, row_indices::Vector{Int})
     if length(y)<opts.minimum_split_size
-        return RegressionLeaf(mean(y))
+        return RegressionLeaf(mean(y), row_indices)
     end
 
     score        = Inf
@@ -134,8 +135,8 @@ function train_regression_branch(x::Matrix{Float64}, y::Vector{Float64}, opts::R
     i_sorted    = sortperm(x[:,best_feature])
     left_locs   = i_sorted[1:split_loc]
     right_locs  = i_sorted[split_loc+1:length(i_sorted)]
-    left        = train_regression_branch(x[left_locs, :], y[left_locs],  opts, features_per_split)
-    right       = train_regression_branch(x[right_locs,:], y[right_locs], opts, features_per_split)
+    left        = train_regression_branch(x[left_locs, :], y[left_locs],  opts, features_per_split, row_indices[left_locs])
+    right       = train_regression_branch(x[right_locs,:], y[right_locs], opts, features_per_split, row_indices[right_locs])
     split_value = x[i_sorted[split_loc], best_feature]
     DecisionBranch(best_feature, split_value, left, right)
 end
